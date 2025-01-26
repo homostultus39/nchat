@@ -99,6 +99,7 @@ void UiModel::KeyHandler(wint_t p_Key)
 
   static wint_t keyForwardMsg = UiKeyConfig::GetKey("forward_msg");
   static wint_t keyGotoChat = UiKeyConfig::GetKey("goto_chat");
+  static wint_t keyJoinChannel = UiKeyConfig::GetKey("join_channel");
 
   static wint_t keyToggleList = UiKeyConfig::GetKey("toggle_list");
   static wint_t keyToggleTop = UiKeyConfig::GetKey("toggle_top");
@@ -205,6 +206,10 @@ void UiModel::KeyHandler(wint_t p_Key)
   else if (p_Key == keyExtEdit)
   {
     ExternalEdit();
+  }
+  else if (p_Key == keyJoinChannel)  // <-- Вставили это
+  {
+      JoinChannel();
   }
   else if (p_Key == keyDeleteMsg)
   {
@@ -3855,6 +3860,45 @@ bool UiModel::IsChatForceMuted(const std::string& p_ChatId)
 {
   static const bool statusBroadcastMuted = (UiConfig::GetNum("status_broadcast") == 1);
   return statusBroadcastMuted && (p_ChatId == "status@broadcast");
+}
+
+void UiModel::JoinChannel()
+{
+    UiDialogParams params(m_View.get(), this, "Join Channel", 0.50, 5);
+    UiTextInputDialog textInputDialog(params, "Enter channel ID (e.g. @fitness_hub): ", "");
+
+    if (textInputDialog.Run())
+    {
+        std::string input = textInputDialog.GetInput();
+        if (!input.empty())
+        {
+            if (input[0] == '@')
+            {
+                input.erase(0, 1);
+            }
+
+            std::shared_ptr<JoinChatRequest> joinChatRequest = std::make_shared<JoinChatRequest>();
+            joinChatRequest->chatId = input;
+
+            std::string profileId = m_CurrentChat.first;
+            if (profileId.empty() && !m_Protocols.empty())
+            {
+                profileId = m_Protocols.begin()->first;
+            }
+
+            if (!profileId.empty())
+            {
+                LOG_TRACE("Sending JoinChatRequest for channelId = %s, profile = %s", input.c_str(), profileId.c_str());
+                SendProtocolRequest(profileId, joinChatRequest);
+            }
+            else
+            {
+                LOG_WARNING("No profile available to send JoinChatRequest!");
+            }
+        }
+    }
+
+    ReinitView();
 }
 
 void UiModel::GotoChat()

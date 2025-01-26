@@ -63,7 +63,6 @@ enum MessageType
   // Request messages
   RequestMessageType,
   GetContactsRequestType,
-  SearchPublicChatsRequestType,
   JoinChatRequestType,
   GetChatsRequestType,
   GetStatusRequestType,
@@ -92,7 +91,6 @@ enum MessageType
   // Service messages
   ServiceMessageType,
   NewContactsNotifyType,
-  SearchPublicChatsNotifyType,
   JoinChatNotifyType,
   NewChatsNotifyType,
   NewMessagesNotifyType,
@@ -327,13 +325,6 @@ public:
   bool isGetTypeOnly = false;
 };
 
-class SearchPublicChatsRequest : public RequestMessage
-{
-public:
-    virtual MessageType GetMessageType() const { return SearchPublicChatsRequestType; }
-    std::string query;
-};
-
 class JoinChatRequest : public RequestMessage
 {
 public:
@@ -446,18 +437,6 @@ public:
   std::vector<ContactInfo> contactInfos;
 };
 
-class SearchPublicChatsNotify : public ServiceMessage
-{
-public:
-    explicit SearchPublicChatsNotify(const std::string& p_ProfileId)
-        : ServiceMessage(p_ProfileId) {
-    }
-
-    virtual MessageType GetMessageType() const { return SearchPublicChatsNotifyType; }
-
-    bool success = false;
-    std::vector<ChatInfo> chatInfos;
-};
 
 class JoinChatNotify : public ServiceMessage
 {

@@ -45,7 +45,7 @@ static void ShowHelp()
     "sp N        - select profile\n"
     "gl          - get contacts list\n"
     "gc          - get chats\n"
-    "spc <query> - search public chat by name\n"
+    "jc [id]     - join channel by id\n"
     "sc N        - select/get chat\n"
     "gm [id]     - get messages\n"
     "sm text     - send message\n"
@@ -84,26 +84,6 @@ void Ui::Run()
       }
 
       ShowPrompt();
-    }
-    // Search public channel by name
-    else if (cmd == "spc")
-    {
-        std::string query;
-        getline(cmdss, query);
-        query = std::regex_replace(query, std::regex("^ +"), "");
-
-        if (query.empty())
-        {
-            std::cout << "Usage: spc <query>\n";
-        }
-        else
-        {
-            std::shared_ptr<SearchPublicChatsRequest> searchRequest = std::make_shared<SearchPublicChatsRequest>();
-            searchRequest->query = query;
-            m_Protocols[m_CurrentProfileId]->SendRequest(searchRequest);
-        }
-
-        ShowPrompt();
     }
     // Join public channel
     else if (cmd == "jc")
