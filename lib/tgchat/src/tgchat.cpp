@@ -509,6 +509,64 @@ void TgChat::Impl::PerformRequest(std::shared_ptr<RequestMessage> p_RequestMessa
       }
       break;
 
+    case JoinChatRequestType:
+      {
+        std::shared_ptr<JoinChatRequest> joinChatReq =
+            std::static_pointer_cast<JoinChatRequest>(p_RequestMessage);
+
+        const std::string username = joinChatReq->chatId;
+        LOG_DEBUG("Join chat request: %s", username.c_str());
+
+        auto search_public_chat =
+            td::td_api::make_object<td::td_api::searchPublicChat>(username);
+
+        SendQuery(std::move(search_public_chat), [this, joinChatReq](Object object)
+            {
+                if (object->get_id() == td::td_api::error::ID)
+                {
+                    auto notify = std::make_shared<JoinChatNotify>(m_ProfileId);
+                    notify->success = false;
+                    notify->chatId = joinChatReq->chatId;
+                    CallMessageHandler(notify);
+                    return;
+                }
+
+                auto chat = td::move_tl_object_as<td::td_api::chat>(object);
+                if (!chat)
+                {
+                    auto notify = std::make_shared<JoinChatNotify>(m_ProfileId);
+                    notify->success = false;
+                    notify->chatId = joinChatReq->chatId;
+                    CallMessageHandler(notify);
+                    return;
+                }
+
+                int64_t foundChatId = chat->id_;
+                LOG_DEBUG("Found chatId = %lld", (long long)foundChatId);
+
+                auto joinChat = td::td_api::make_object<td::td_api::joinChat>();
+                joinChat->chat_id_ = foundChatId;
+
+                SendQuery(std::move(joinChat), [this, joinChatReq](Object object2)
+                    {
+                        auto notify = std::make_shared<JoinChatNotify>(m_ProfileId);
+                        notify->chatId = joinChatReq->chatId;
+
+                        if (object2->get_id() == td::td_api::error::ID)
+                        {
+                            notify->success = false;
+                        }
+                        else
+                        {
+                            notify->success = true;
+                        }
+
+                        CallMessageHandler(notify);
+                    });
+            });
+        }
+        break;
+
     case GetChatsRequestType:
       {
         LOG_DEBUG("Get chats");

@@ -1623,6 +1623,13 @@ void UiModel::MessageHandler(std::shared_ptr<ServiceMessage> p_ServiceMessage)
       }
       break;
 
+    case JoinChatNotifyType:
+      {
+        auto joinNotify = std::static_pointer_cast<JoinChatNotify>(p_ServiceMessage);
+        LOG_TRACE("JoinChatNotify success = %d chatId=%s", joinNotify->success, joinNotify->chatId.c_str());
+      }
+      break;
+
     case NewChatsNotifyType:
       {
         std::shared_ptr<NewChatsNotify> newChatsNotify = std::static_pointer_cast<NewChatsNotify>(p_ServiceMessage);
