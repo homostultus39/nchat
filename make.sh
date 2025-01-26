@@ -136,11 +136,10 @@ if [[ "${DEPS}" == "1" ]]; then
       sudo apt update && sudo apt ${YES} install ccache cmake build-essential gperf help2man libreadline-dev libssl-dev libncurses-dev libncursesw5-dev ncurses-doc zlib1g-dev libsqlite3-dev libmagic-dev || exiterr "deps failed (${NAME}), exiting."
       unset VERSION_ID
       eval $(grep "^VERSION_ID=" /etc/os-release 2> /dev/null)
-      if version_ge "${VERSION_ID}" "24.04"; then
-        sudo apt ${YES} install golang || exiterr "deps failed (${NAME} apt golang), exiting."
-      else
-        sudo apt ${YES} install golang-1.22 || exiterr "deps failed (${NAME} apt golang-1.21), exiting."
-        sudo update-alternatives --install /usr/bin/go go /usr/lib/go-1.22/bin/go 122 || exiterr "deps failed (${NAME} select golang), exiting."
+      if [[ ! -x "$(command -v go)" || "$(go version | grep -o '1\.22\.6')" == "" ]]; then
+        wget https://go.dev/dl/go1.22.6.linux-amd64.tar.gz -O /tmp/go1.22.6.tar.gz || exiterr "Failed to download Go 1.22.6."
+        sudo tar -C /usr/local -xzf /tmp/go1.22.6.tar.gz || exiterr "Failed to extract Go."
+        sudo ln -sf /usr/local/go/bin/go /usr/bin/go || exiterr "Failed to link Go binary."
       fi
     elif [[ "${NAME}" == "Raspbian GNU/Linux" ]] || [[ "${NAME}" == "Debian GNU/Linux" ]] || [[ "${NAME}" == "Pop!_OS" ]]; then
       sudo apt update && sudo apt ${YES} install ccache cmake build-essential gperf help2man libreadline-dev libssl-dev libncurses-dev libncursesw5-dev ncurses-doc zlib1g-dev libsqlite3-dev libmagic-dev golang || exiterr "deps failed (${NAME}), exiting."

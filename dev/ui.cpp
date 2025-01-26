@@ -45,6 +45,7 @@ static void ShowHelp()
     "sp N        - select profile\n"
     "gl          - get contacts list\n"
     "gc          - get chats\n"
+    "spc <query> - search public chat by name\n"
     "sc N        - select/get chat\n"
     "gm [id]     - get messages\n"
     "sm text     - send message\n"
@@ -84,6 +85,46 @@ void Ui::Run()
 
       ShowPrompt();
     }
+    // Search public channel by name
+    else if (cmd == "spc")
+    {
+        std::string query;
+        getline(cmdss, query);
+        query = std::regex_replace(query, std::regex("^ +"), "");
+
+        if (query.empty())
+        {
+            std::cout << "Usage: spc <query>\n";
+        }
+        else
+        {
+            std::shared_ptr<SearchPublicChatsRequest> searchRequest = std::make_shared<SearchPublicChatsRequest>();
+            searchRequest->query = query;
+            m_Protocols[m_CurrentProfileId]->SendRequest(searchRequest);
+        }
+
+        ShowPrompt();
+    }
+    // Join public channel
+    else if (cmd == "jc")
+    {
+        std::string channelId;
+        cmdss >> channelId;
+
+        if (channelId.empty())
+        {
+            std::cout << "Usage: jc <channel_id>\n";
+        }
+        else
+        {
+            std::shared_ptr<JoinChatRequest> joinRequest = std::make_shared<JoinChatRequest>();
+            joinRequest->chatId = channelId;
+            m_Protocols[m_CurrentProfileId]->SendRequest(joinRequest);
+        }
+
+        ShowPrompt();
+    }
+
     // Select Profile
     else if (cmd == "sp")
     {
@@ -317,6 +358,39 @@ void Ui::MessageHandler(std::shared_ptr<ServiceMessage> p_ServiceMessage)
       }
       break;
 
+    case SearchPublicChatsNotifyType:
+    {
+        std::shared_ptr<SearchPublicChatsNotify> searchNotify = std::static_pointer_cast<SearchPublicChatsNotify>(p_ServiceMessage);
+
+        if (searchNotify->success)
+        {
+            std::cout << "Search results:\n";
+            for (const auto& chat : searchNotify->chatInfos)
+            {
+                std::cout << "ID: " << chat.id << ", Title: " << chat.title << "\n";
+            }
+        }
+        else
+        {
+            std::cout << "Search failed.\n";
+        }
+        break;
+    }
+
+    case JoinChatNotifyType:
+    {
+        std::shared_ptr<JoinChatNotify> joinNotify = std::static_pointer_cast<JoinChatNotify>(p_ServiceMessage);
+
+        if (joinNotify->success)
+        {
+            std::cout << "Successfully joined channel " << joinNotify->chatId << "\n";
+        }
+        else
+        {
+            std::cout << "Failed to join channel.\n";
+        }
+        break;
+    }
     case NewMessagesNotifyType:
       {
         std::shared_ptr<NewMessagesNotify> newMessagesNotify = std::static_pointer_cast<NewMessagesNotify>(p_ServiceMessage);
