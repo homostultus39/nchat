@@ -57,6 +57,7 @@ public:
   std::vector<std::string> SelectFile();
   void TransferFile();
   void InsertEmoji();
+  void JoinChannel();
   void SearchContact();
   void FetchCachedMessage(const std::string& p_ProfileId, const std::string& p_ChatId,
                           const std::string& p_MsgId);
