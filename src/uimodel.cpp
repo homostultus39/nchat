@@ -3864,40 +3864,37 @@ bool UiModel::IsChatForceMuted(const std::string& p_ChatId)
 
 void UiModel::JoinChannel()
 {
-    UiDialogParams params(m_View.get(), this, "Join Channel", 0.50, 5);
-    UiTextInputDialog textInputDialog(params, "Enter channel ID (e.g. @fitness_hub): ", "");
-
-    if (textInputDialog.Run())
+    // (примерная логика)
     {
-        std::string input = textInputDialog.GetInput();
+        std::unique_lock<std::mutex> lock(m_ModelMutex);
+        if (GetEditMessageActive()) return;
+    }
+
+    UiDialogParams params(m_View.get(), this, "Join Channel", 0.50, 5);
+    UiTextInputDialog dialog(params, "Enter channel ID:", "");
+    if (dialog.Run())
+    {
+        std::string input = dialog.GetInput();
         if (!input.empty())
         {
-            if (input[0] == '@')
-            {
-                input.erase(0, 1);
-            }
+            if (input[0] == '@') input.erase(0, 1);
+            // Готовим JoinChatRequest
+            auto joinReq = std::make_shared<JoinChatRequest>();
+            joinReq->chatId = input;
 
-            std::shared_ptr<JoinChatRequest> joinChatRequest = std::make_shared<JoinChatRequest>();
-            joinChatRequest->chatId = input;
-
+            // Выбираем профиль
             std::string profileId = m_CurrentChat.first;
             if (profileId.empty() && !m_Protocols.empty())
-            {
                 profileId = m_Protocols.begin()->first;
-            }
 
             if (!profileId.empty())
             {
-                LOG_TRACE("Sending JoinChatRequest for channelId = %s, profile = %s", input.c_str(), profileId.c_str());
-                SendProtocolRequest(profileId, joinChatRequest);
-            }
-            else
-            {
-                LOG_WARNING("No profile available to send JoinChatRequest!");
+                SendProtocolRequest(profileId, joinReq);
             }
         }
     }
 
+    // после закрытия диалога обновляем UI
     ReinitView();
 }
 
