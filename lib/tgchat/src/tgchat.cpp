@@ -517,6 +517,7 @@ void TgChat::Impl::PerformRequest(std::shared_ptr<RequestMessage> p_RequestMessa
         const std::string username = joinChatReq->chatId;
         LOG_DEBUG("Join chat request: %s", username.c_str());
 
+        // 1) Ищем публичный канал
         auto search_public_chat =
             td::td_api::make_object<td::td_api::searchPublicChat>(username);
 
@@ -524,6 +525,7 @@ void TgChat::Impl::PerformRequest(std::shared_ptr<RequestMessage> p_RequestMessa
             {
                 if (object->get_id() == td::td_api::error::ID)
                 {
+                    // Ошибка поиска
                     auto notify = std::make_shared<JoinChatNotify>(m_ProfileId);
                     notify->success = false;
                     notify->chatId = joinChatReq->chatId;
@@ -541,31 +543,33 @@ void TgChat::Impl::PerformRequest(std::shared_ptr<RequestMessage> p_RequestMessa
                     return;
                 }
 
-                int64_t foundChatId = chat->id_;
+                int64_t foundChatId = chat->id_; // числовой chat_id
                 LOG_DEBUG("Found chatId = %lld", (long long)foundChatId);
 
+                // 2) Присоединяемся
                 auto joinChat = td::td_api::make_object<td::td_api::joinChat>();
                 joinChat->chat_id_ = foundChatId;
 
-                SendQuery(std::move(joinChat), [this, joinChatReq](Object object2)
+                SendQuery(std::move(joinChat), [this, joinChatReq, foundChatId](Object object2)
                     {
                         auto notify = std::make_shared<JoinChatNotify>(m_ProfileId);
                         notify->chatId = joinChatReq->chatId;
-
-                        if (object2->get_id() == td::td_api::error::ID)
-                        {
-                            notify->success = false;
-                        }
-                        else
-                        {
-                            notify->success = true;
-                        }
-
+                        notify->success = (object2->get_id() != td::td_api::error::ID);
                         CallMessageHandler(notify);
+
+                        // *** Добавляем запрос, чтобы чаты обновились в UI ***
+                        if (notify->success)
+                        {
+                            // Шлём обычный GetChatsRequest — но только для одного чата.
+                            std::shared_ptr<GetChatsRequest> getChatsRequest = std::make_shared<GetChatsRequest>();
+                            // Вставляем hex-ид канала
+                            getChatsRequest->chatIds.insert(StrUtil::NumToHex(foundChatId));
+                            SendRequest(getChatsRequest);
+                        }
                     });
             });
-        }
-        break;
+      }
+      break;
 
     case GetChatsRequestType:
       {
